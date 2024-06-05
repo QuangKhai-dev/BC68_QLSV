@@ -1,41 +1,68 @@
 let arrSinhVien = [];
 
-// Thêm sinh viên vào mảng
-// tạo một sự kiện onsubmit
-// xử lí sử dụng một số cách đã được hướng dẫn để lấy dữ liệu từ các input và select
-document.getElementById("formQLSV").onsubmit = function (event) {
-  event.preventDefault();
+// Lấy dữ liệu sinh viên từ form
+function getValueForm() {
   let arrField = document.querySelectorAll("#formQLSV input,#formQLSV select");
-  // console.log(arrField);
-
   let sinhVien = new SinhVien();
-  console.log(sinhVien);
-
+  let isValid = true; // 1
   // vòng lặp for of để xử lí lấy dữ liệu
   for (let field of arrField) {
     // console.log(field);
     let { value, id } = field;
     sinhVien[id] = value;
+    // xử lí kiểm tra validation dữ liệu
+    // sử dụng một câu lệnh để gọi tới thẻ cha đang chứa input
+    let parent = field.parentElement;
+    let errorField = parent.querySelector("span");
+    let check = checkEmptyValue(value, errorField);
+    // Toán nhị phân 1 & 0 ==> 0
+    isValid &= check;
+    // Chỉ kiểm tra input tên sv
+    // Nếu như trường hợp là dữ liệu rỗng thì phải hiển thị là không bỏ trống chứ không hiển thị check min max
+    if (check && id == "txtTenSV") {
+      isValid &= checkMinMaxValue(value, errorField, 7, 9);
+    }
+    if (check && id == "txtEmail") {
+      isValid &= checkEmailValue(value, errorField);
+      // checkPhoneNumberValue(value, errorField);
+    }
+  }
+  if (isValid) {
+    return sinhVien;
+  }
+}
+
+// tự động hiển thị dữ liệu mới, lưu trữ xuống localstorage và reset form
+function renderSaveReset() {
+  renderArrSinhVien();
+  saveLocalStorage();
+  // xử lí reset form
+  document.getElementById("formQLSV").reset();
+}
+
+// Thêm sinh viên vào mảng
+// tạo một sự kiện onsubmit
+// xử lí sử dụng một số cách đã được hướng dẫn để lấy dữ liệu từ các input và select
+document.getElementById("formQLSV").onsubmit = function (event) {
+  event.preventDefault();
+  let maSV = document.getElementById("txtMaSV").value;
+  console.log(maSV); // ""
+  let sinhVien = getValueForm();
+  if (!sinhVien) {
+    return;
   }
   // console.log(sinhVien);
   // thêm sinh viên vào mảng
   arrSinhVien.push(sinhVien);
 
-  // chạy hàm renderArrSinhVien để hiển thị dữ liệu
-  renderArrSinhVien();
-  // gọi tới phương thức lưu trữ local
-  saveLocalStorage();
-
-  // xoá toàn bộ dữ liệu đang có trên form
-  // event.target.reset();
-  document.getElementById("formQLSV").reset();
+  renderSaveReset();
 };
 
 // Hiển thị dữ liệu sinh viên lên giao diện
-function renderArrSinhVien() {
+function renderArrSinhVien(arr = arrSinhVien) {
   // B1 Tạo một vòng lặp duyệt các sinh viên có trong mảng
   let content = "";
-  for (let sinhVien of arrSinhVien) {
+  for (let sinhVien of arr) {
     // console.log(sinhVien);
     // khởi tạo một đối tượng từ lớp đối tượng sinh viên
     let newArrSinhVien = new SinhVien();
@@ -132,6 +159,49 @@ function getInfoSinhVien(mssv) {
     document.getElementById("txtMaSV").readOnly = true;
   }
 }
+
+// chức năng cập nhật thông tin sinh viên
+function updateSinhVien(abc) {
+  console.log(abc);
+  console.log("Hello update");
+  // thực hiện xử lí lấy dữ liệu từ người dùng ()
+  let sinhVien = getValueForm();
+
+  // Tìm kiếm vị trí index của phần tử đang chỉnh sửa trong mảng
+  let index = arrSinhVien.findIndex((item) => item.txtMaSV == sinhVien.txtMaSV);
+  if (index != -1) {
+    arrSinhVien[index] = sinhVien;
+    renderSaveReset();
+    document.getElementById("txtMaSV").readOnly = false;
+  }
+  // Thực hiện cập nhật lại dữ liệu tại vị trí tìm được cho mảng
+}
+document.querySelector(".btn-info").onclick = updateSinhVien;
+
+// chức năng tìm kiếm
+function searchSinhVien(event) {
+  // console.log(event.target.value);
+  // Nồi chiên không dầu
+  // noi chien khong dau
+  // convert dữ liệu trước khi lọc ==> chuyển keyword và tên của các dữ liệu cần lọc về chữ thường (toLowerCase) ==> loại bỏ đi tất cả dấu tiếng việt ==> loại bỏ các khoảng trắng ở đầu và cuối chuỗi (trim)
+  let newKeyWord = removeVietnameseTones(
+    event.target.value.toLowerCase().trim()
+  );
+  // khi filter hoạt động, hàm sẽ lọc tìm kiếm và trả về một mảng mới lưu trữ vào arrSinhVienFilter
+  let arrSinhVienFilter = arrSinhVien.filter((item, index) => {
+    // thực hiện kiểm tra xem keyword người dùng nhập vào có được chứa trong tên sinh viên hay không
+    let newTenSinhVien = removeVietnameseTones(
+      item.txtTenSV.toLowerCase().trim()
+    );
+    // includes  // long ==> lo ==> true
+    return newTenSinhVien.includes(newKeyWord);
+  });
+  console.log(arrSinhVienFilter);
+  // gọi hàm hiển thị sinh viên
+  renderArrSinhVien(arrSinhVienFilter);
+}
+// oninput
+document.getElementById("txtSearch").oninput = searchSinhVien;
 
 // Học cách tương tác với local storage
 // let arrNhanVien = [
